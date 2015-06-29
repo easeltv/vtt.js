@@ -1,4 +1,4 @@
-/* vtt.js - v0.12.1 (https://github.com/mozilla/vtt.js) built on 21-03-2015 */
+/* vtt.js - v0.12.1 (https://github.com/mozilla/vtt.js) built on 29-06-2015 */
 
 /**
  * Copyright 2013 vtt.js Contributors
@@ -307,6 +307,9 @@
   };
 
   root.VTTCue = VTTCue || root.VTTCue;
+  if ( window ) {
+    window.VTTCue = root.VTTCue;
+  }
 }(this));
 
 /**
@@ -445,6 +448,9 @@
   }
 
   root.VTTRegion = root.VTTRegion || VTTRegion;
+  if ( window ) {
+    window.VTTRegion = root.VTTRegion;
+  }
 }(this));
 
 /**
