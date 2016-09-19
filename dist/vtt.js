@@ -1,4 +1,4 @@
-/* vtt.js - v0.12.1 (https://github.com/mozilla/vtt.js) built on 29-06-2015 */
+/* vtt.js - v0.12.1 (https://github.com/mozilla/vtt.js) built on 03-12-2015 */
 
 /**
  * Copyright 2013 vtt.js Contributors
@@ -307,9 +307,6 @@
   };
 
   root.VTTCue = VTTCue || root.VTTCue;
-  if ( window ) {
-    window.VTTCue = root.VTTCue;
-  }
 }(this));
 
 /**
@@ -448,9 +445,6 @@
   }
 
   root.VTTRegion = root.VTTRegion || VTTRegion;
-  if ( window ) {
-    window.VTTRegion = root.VTTRegion;
-  }
 }(this));
 
 /**
@@ -473,6 +467,56 @@
 /* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
 
 (function(global) {
+  function makeColorSet(color, opacity) {
+    if(opacity === undefined) {
+      opacity = 1;
+    }
+    return "rgba(" + [parseInt(color.substring(0, 2), 16),
+                      parseInt(color.substring(2, 4), 16),
+                      parseInt(color.substring(4, 6), 16),
+                      opacity].join(",") + ")";
+  }
+
+  var WebVTTPrefs = ['webvtt.font.color', 'webvtt.font.opacity', 'webvtt.font.scale',
+                     'webvtt.bg.color', 'webvtt.bg.opacity',
+                     'webvtt.edge.color', 'webvtt.edge.type'];
+
+  var fontScale = 1;
+
+  function observe(subject, topic, data) {
+    switch (data) {
+      case "webvtt.font.color":
+      case "webvtt.font.opacity":
+        var fontColor = Services.prefs.getCharPref("webvtt.font.color");
+        var fontOpacity = Services.prefs.getIntPref("webvtt.font.opacity") / 100;
+        WebVTTSet.fontSet = makeColorSet(fontColor, fontOpacity);
+        break;
+      case "webvtt.font.scale":
+        fontScale = Services.prefs.getIntPref("webvtt.font.scale") / 100;
+        break;
+      case "webvtt.bg.color":
+      case "webvtt.bg.opacity":
+        var backgroundColor = Services.prefs.getCharPref("webvtt.bg.color");
+        var backgroundOpacity = Services.prefs.getIntPref("webvtt.bg.opacity") / 100;
+        WebVTTSet.backgroundSet = makeColorSet(backgroundColor, backgroundOpacity);
+        break;
+      case "webvtt.edge.color":
+      case "webvtt.edge.type":
+        var edgeTypeList = ["", "0px 0px ", "4px 4px 4px ", "-2px -2px ", "2px 2px "];
+        var edgeType = Services.prefs.getIntPref("webvtt.edge.type");
+        var edgeColor = Services.prefs.getCharPref("webvtt.edge.color");
+        WebVTTSet.edgeSet = edgeTypeList[edgeType] + makeColorSet(edgeColor);
+        break;
+    }
+  }
+
+  if(typeof Services !== "undefined") {
+    var WebVTTSet = {};
+    WebVTTPrefs.forEach(function (pref) {
+      observe(undefined, undefined, pref);
+      Services.prefs.addObserver(pref, observe, false);
+    });
+  }
 
   var _objCreate = Object.create || (function() {
     function F() {}
@@ -1171,9 +1215,17 @@
   // Constructs the computed display state of the cue (a div). Places the div
   // into the overlay which should be a block level element (usually a div).
   function CueStyleBox(window, cue, styleOptions) {
-    var isIE8 = (/MSIE\s8\.0/).test(navigator.userAgent);
+    var isIE8 = (typeof navigator !== "undefined") &&
+      (/MSIE\s8\.0/).test(navigator.userAgent);
     var color = "rgba(255, 255, 255, 1)";
     var backgroundColor = "rgba(0, 0, 0, 0.8)";
+    var textShadow = "";
+
+    if(typeof WebVTTSet !== "undefined") {
+      color = WebVTTSet.fontSet;
+      backgroundColor = WebVTTSet.backgroundSet;
+      textShadow = WebVTTSet.edgeSet;
+    }
 
     if (isIE8) {
       color = "rgb(255, 255, 255)";
@@ -1189,6 +1241,7 @@
     var styles = {
       color: color,
       backgroundColor: backgroundColor,
+      textShadow: textShadow,
       position: "relative",
       left: 0,
       right: 0,
@@ -1280,7 +1333,8 @@
   // compute things with such as if it overlaps or intersects with another Element.
   // Can initialize it with either a StyleBox or another BoxPosition.
   function BoxPosition(obj) {
-    var isIE8 = (/MSIE\s8\.0/).test(navigator.userAgent);
+    var isIE8 = (typeof navigator !== "undefined") &&
+      (/MSIE\s8\.0/).test(navigator.userAgent);
 
     // Either a BoxPosition was passed in and we need to copy it, or a StyleBox
     // was passed in and we need to copy the results of 'getBoundingClientRect'
@@ -1634,7 +1688,7 @@
         containerBox = BoxPosition.getSimpleBoxPosition(paddedOverlay),
         fontSize = Math.round(containerBox.height * FONT_SIZE_PERCENT * 100) / 100;
     var styleOptions = {
-      font: fontSize + "px " + FONT_STYLE
+      font: (fontSize * fontScale) + "px " + FONT_STYLE
     };
 
     (function() {
