@@ -307,7 +307,7 @@
   };
 
   root.VTTCue = VTTCue || root.VTTCue;
-  if ( window ) {
+  if ( typeof window !== 'undefined' ) {
     window.VTTCue = root.VTTCue;
   }
 }(this));
@@ -448,7 +448,7 @@
   }
 
   root.VTTRegion = root.VTTRegion || VTTRegion;
-  if ( window ) {
+  if ( typeof window !== 'undefined' ) {
     window.VTTRegion = root.VTTRegion;
   }
 }(this));
